@@ -71,17 +71,19 @@ const MainPage = ({ navigation }) => {
       </View>
 
       {/* Speech to text input */}
-      <TextInput
-        style={styles.input}
-        value={inputText}
-        onChangeText={setInputText}
-        placeholder="Type your message..."
-      />
+      <View style={{ flexDirection: "row", justifyContent: "center" }}>
+        <TextInput
+          style={styles.input}
+          value={inputText}
+          onChangeText={setInputText}
+          placeholder="Type your message..."
+        />
 
-      {/* Send button */}
-      <TouchableOpacity style={styles.sendButton} onPress={handleSubmit}>
-        <Text style={styles.sendButtonText}>Send</Text>
-      </TouchableOpacity>
+        {/* Send button */}
+        <TouchableOpacity style={styles.sendButton} onPress={handleSubmit}>
+          <Text style={styles.sendButtonText}>Send</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Mic and camera buttons */}
       <View style={styles.buttonContainer}>
@@ -133,6 +135,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     paddingHorizontal: 10,
     marginBottom: 10,
+    flex: 5,
   },
   sendButton: {
     alignSelf: "flex-end",
@@ -151,9 +154,9 @@ const styles = StyleSheet.create({
   buttonRow: {
     flex: 1,
     height: "100%",
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#DDDDDD',
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#DDDDDD",
   },
 });
 
