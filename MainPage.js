@@ -2,23 +2,20 @@ import React, { useState, useRef } from "react";
 import {
   View,
   Text,
-  Button,
   TouchableOpacity,
   StyleSheet,
   TextInput,
 } from "react-native";
 import { Audio } from "expo-av"; // Import Expo Audio module for sound playback
+import { ScrollView } from "react-native-gesture-handler";
 
 const MainPage = ({ navigation }) => {
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState([
+    { text: "bot", isUser: false },
+    { text: "user", isUser: true },
+  ]);
   const [inputText, setInputText] = useState("");
   const sound = useRef(new Audio.Sound());
-
-  // Function to add a message to the chat
-  const addMessage = (text, isUser) => {
-    const newMessage = { text, isUser };
-    setMessages([...messages, newMessage]);
-  };
 
   // Function to play AI response
   const playResponse = async (text) => {
@@ -42,40 +39,42 @@ const MainPage = ({ navigation }) => {
 
   // Function to handle message submission
   const handleSubmit = () => {
+    setMessages([
+      ...messages,
+      { text: "This is an AI--generated response.", isUser: false },
+    ]);
+
     // Add user message to chat
-    addMessage(inputText, true);
+    setMessages([...messages, { text: inputText, isUser: true }]);
 
     // Clear input field
     setInputText("");
-
-    // Simulate AI response after 1 second (replace with actual AI interaction)
-    setTimeout(() => {
-      const aiResponse = "This is an AI-generated response.";
-      addMessage(aiResponse, false);
-      playResponse(aiResponse);
-    }, 1000);
   };
 
   return (
     <View style={styles.container}>
       {/* Chat messages */}
-      <View style={styles.chatContainer}>
-        {messages.map((message, index) => (
-          <View
-            key={index}
-            style={message.isUser ? styles.userMessage : styles.aiMessage}
-          >
-            <Text style={styles.messageText}>{message.text}</Text>
-          </View>
-        ))}
-      </View>
+      <ScrollView style={styles.chatContainer}>
+        {messages.map((message, index) => {
+          return (
+            <View
+              key={index}
+              style={message.isUser ? styles.userMessage : styles.aiMessage}
+            >
+              <Text style={styles.messageText}>{message.text}</Text>
+            </View>
+          );
+        })}
+      </ScrollView>
 
       {/* Speech to text input */}
-      <View style={{ flexDirection: "row", justifyContent: "center" }}>
+      <View style={{ flexDirection: "row" }}>
         <TextInput
           style={styles.input}
           value={inputText}
-          onChangeText={setInputText}
+          onChangeText={(inputText) => {
+            setInputText(inputText);
+          }}
           placeholder="Type your message..."
         />
 
