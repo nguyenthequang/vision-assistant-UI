@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { Audio } from "expo-av"; // Import Expo Audio module for sound playback
 import { ScrollView } from "react-native-gesture-handler";
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 const MainPage = ({ navigation }) => {
   const [messages, setMessages] = useState([
@@ -86,11 +87,17 @@ const MainPage = ({ navigation }) => {
 
       {/* Mic and camera buttons */}
       <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.buttonRow} onPress={handleMicPress}>
-          <Text>Mic</Text>
+        <TouchableOpacity
+          style={[styles.buttonRow, { borderTopLeftRadius: 20 }]}
+          onPress={handleMicPress}
+        >
+          <Ionicons name='md-mic' size={150} color='#EBEBEB' />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.buttonRow} onPress={handleCameraPress}>
-          <Text>Camera</Text>
+        <TouchableOpacity
+          style={[styles.buttonRow, { borderTopRightRadius: 20 }]}
+          onPress={handleCameraPress}
+        >
+          <Ionicons name='camera-outline' size={150} color='#EBEBEB' />
         </TouchableOpacity>
       </View>
 
@@ -104,8 +111,8 @@ const styles = StyleSheet.create({
   container: {
     width: "100%",
     height: "100%",
-    paddingBottom: 20,
-    paddingHorizontal: 20,
+    paddingBottom: 0,
+    paddingHorizontal: 0,
   },
   chatContainer: {
     flex: 1,
@@ -155,7 +162,7 @@ const styles = StyleSheet.create({
     height: "100%",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#DDDDDD",
+    backgroundColor: "#007AFF",
   },
 });
 
