@@ -1,36 +1,105 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   TextInput,
+  Button,
 } from "react-native";
 import { Audio } from "expo-av"; // Import Expo Audio module for sound playback
 import { ScrollView } from "react-native-gesture-handler";
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 const MainPage = ({ navigation }) => {
   const [messages, setMessages] = useState([
-    { text: "bot", isUser: false },
-    { text: "user", isUser: true },
+    { text: "bot", isUser: false, isAudio: false, audio: undefined },
+    { text: "user", isUser: true, isAudio: false, audio: undefined },
   ]);
   const [inputText, setInputText] = useState("");
+  const [recording, setRecording] = useState();
+  const [recordings, setRecordings] = useState([]);
+
   const sound = useRef(new Audio.Sound());
 
-  // Function to play AI response
-  const playResponse = async (text) => {
+  // Function to handle microphone button press
+  const getDurationFormatted = (millis) => {
+    const minutes = millis / 1000 / 60;
+    const minutesDisplay = Math.floor(minutes);
+    const seconds = Math.round((minutes - minutesDisplay) * 60);
+    const secondsDisplay = seconds < 10 ? `0${seconds}` : seconds;
+    return `${minutesDisplay}:${secondsDisplay}`;
+  };
+
+  const getRecordingLines = () => {
+    return recordings.map((recordingLine, index) => {
+      // console.log("In getRecordingLines: ", recordingLine);
+      return (
+        <View key={index} style={styles.row}>
+          <Text style={styles.fill}>
+            Recording {index + 1} - {recordingLine.duration}
+          </Text>
+          <Button
+            style={styles.button}
+            onPress={() => recordingLine.sound.replayAsync()}
+            title="Play"
+          ></Button>
+          <Button
+            style={styles.button}
+            onPress={() => Sharing.shareAsync(recordingLine.file)}
+            title="Share"
+          ></Button>
+        </View>
+      );
+    });
+  };
+
+  const handleMicPress = async () => {
     try {
-      await sound.current.loadAsync(require("./your_ai_response_sound.mp3"));
-      await sound.current.playAsync();
+      const permission = await Audio.requestPermissionsAsync();
+
+      if (permission.status == "granted") {
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: true,
+          playsInSilentModeIOS: true,
+        });
+        const { recording } = await Audio.Recording.createAsync(
+          Audio.RECORDING_OPTIONS_PRESET_HIGH_QUALITY
+        );
+        console.log("RECORDING");
+        setRecording(recording);
+      } else {
+        console.log("Please grant permission");
+      }
     } catch (error) {
-      console.log("Error playing sound", error);
+      console.log("Fail to start recording", error);
     }
   };
 
-  // Function to handle microphone button press
-  const handleMicPress = () => {
-    // Implement microphone functionality
+  const handleMicRelease = async () => {
+    setRecording(undefined);
+    await recording.stopAndUnloadAsync();
+    console.log("STOP RECORDING");
+    console.log(recording.getURI());
+
+    let updateRecordings = [...recordings];
+    const { sound, status } = await recording.createNewLoadedSoundAsync();
+    updateRecordings.push({
+      sound: sound,
+      duration: getDurationFormatted(status.durationMillis),
+      file: recording.getURI(),
+    });
+
+    setMessages([
+      ...messages,
+      { text: "", isUser: true, isAudio: true, audio: {
+        sound: sound,
+        duration: getDurationFormatted(status.durationMillis),
+        file: recording.getURI(),
+      } },
+    ]);
+
+    setRecordings(updateRecordings);
   };
 
   // Function to handle camera button press
@@ -57,12 +126,20 @@ const MainPage = ({ navigation }) => {
       {/* Chat messages */}
       <ScrollView style={styles.chatContainer}>
         {messages.map((message, index) => {
+          // console.log(message);
           return (
             <View
               key={index}
               style={message.isUser ? styles.userMessage : styles.aiMessage}
             >
-              <Text style={styles.messageText}>{message.text}</Text>
+              {message.isAudio ? (
+                <Button
+                  style={styles.button}
+                  onPress={() => message.audio.sound.replayAsync()}
+                  title="Play"></Button>
+              ) : (
+                <Text style={styles.messageText}>{message.text}</Text>
+              )}
             </View>
           );
         })}
@@ -84,20 +161,22 @@ const MainPage = ({ navigation }) => {
           <Text style={styles.sendButtonText}>Send</Text>
         </TouchableOpacity>
       </View>
+      {/* {getRecordingLines()} */}
 
       {/* Mic and camera buttons */}
       <View style={styles.buttonContainer}>
         <TouchableOpacity
           style={[styles.buttonRow, { borderTopLeftRadius: 20 }]}
-          onPress={handleMicPress}
+          onPressIn={handleMicPress}
+          onPressOut={handleMicRelease}
         >
-          <Ionicons name='md-mic' size={150} color='#EBEBEB' />
+          <Ionicons name="md-mic" size={150} color="#EBEBEB" />
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.buttonRow, { borderTopRightRadius: 20 }]}
           onPress={handleCameraPress}
         >
-          <Ionicons name='camera-outline' size={150} color='#EBEBEB' />
+          <Ionicons name="camera-outline" size={150} color="#EBEBEB" />
         </TouchableOpacity>
       </View>
 
