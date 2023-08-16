@@ -6,21 +6,60 @@ import {
   StyleSheet,
   TextInput,
   Button,
+  SafeAreaView,
+  Image,
 } from "react-native";
 import { Audio } from "expo-av"; // Import Expo Audio module for sound playback
-import { ScrollView } from "react-native-gesture-handler";
+import { FlatList, ScrollView } from "react-native-gesture-handler";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { Camera } from "expo-camera";
+import { shareAsync } from "expo-sharing";
+import * as MediaLibrary from "expo-media-library";
+import { StatusBar } from "expo-status-bar";
 
 const MainPage = ({ navigation }) => {
   const [messages, setMessages] = useState([
-    { text: "bot", isUser: false, isAudio: false, audio: undefined },
-    { text: "user", isUser: true, isAudio: false, audio: undefined },
+    {
+      text: "bot",
+      isUser: false,
+      isAudio: false,
+      audio: undefined,
+      isPic: false,
+      pic: undefined,
+    },
+    {
+      text: "user",
+      isUser: true,
+      isAudio: false,
+      audio: undefined,
+      isPic: false,
+      pic: undefined,
+    },
   ]);
   const [inputText, setInputText] = useState("");
+
+  // Recording states
   const [recording, setRecording] = useState();
   const [recordings, setRecordings] = useState([]);
 
-  const sound = useRef(new Audio.Sound());
+  // Photo states
+  let cameraRef = useRef();
+  const [isTakingPhoto, setIsTakingPhoto] = useState(false);
+  const [hasCameraPermission, setHasCameraPermission] = useState();
+  const [hasMediaLibraryPermission, setHasMediaLibraryPermission] = useState();
+  const [photo, setPhoto] = useState();
+
+  const scrollViewRef = useRef()
+
+  useEffect(() => {
+    (async () => {
+      const cameraPermission = await Camera.requestCameraPermissionsAsync();
+      const mediaLibraryPermission =
+        await MediaLibrary.requestPermissionsAsync();
+      setHasCameraPermission(cameraPermission.status === "granted");
+      setHasMediaLibraryPermission(mediaLibraryPermission.status === "granted");
+    })();
+  }, []);
 
   // Function to handle microphone button press
   const getDurationFormatted = (millis) => {
@@ -29,29 +68,6 @@ const MainPage = ({ navigation }) => {
     const seconds = Math.round((minutes - minutesDisplay) * 60);
     const secondsDisplay = seconds < 10 ? `0${seconds}` : seconds;
     return `${minutesDisplay}:${secondsDisplay}`;
-  };
-
-  const getRecordingLines = () => {
-    return recordings.map((recordingLine, index) => {
-      // console.log("In getRecordingLines: ", recordingLine);
-      return (
-        <View key={index} style={styles.row}>
-          <Text style={styles.fill}>
-            Recording {index + 1} - {recordingLine.duration}
-          </Text>
-          <Button
-            style={styles.button}
-            onPress={() => recordingLine.sound.replayAsync()}
-            title="Play"
-          ></Button>
-          <Button
-            style={styles.button}
-            onPress={() => Sharing.shareAsync(recordingLine.file)}
-            title="Share"
-          ></Button>
-        </View>
-      );
-    });
   };
 
   const handleMicPress = async () => {
@@ -92,17 +108,74 @@ const MainPage = ({ navigation }) => {
 
     setMessages([
       ...messages,
-      { text: "", isUser: true, isAudio: true, audio: {
-        sound: sound,
-        duration: getDurationFormatted(status.durationMillis),
-        file: recording.getURI(),
-      } },
+      {
+        text: "",
+        isUser: true,
+        isAudio: true,
+        audio: {
+          sound: sound,
+          duration: getDurationFormatted(status.durationMillis),
+          file: recording.getURI(),
+        },
+        isPic: false,
+        pic: undefined,
+      },
     ]);
 
     setRecordings(updateRecordings);
   };
 
   // Function to handle camera button press
+
+  let takePic = async () => {
+    let options = {
+      quality: 1,
+      base64: true,
+      exif: false,
+    };
+
+    let newPhoto = await cameraRef.current.takePictureAsync(options);
+    setPhoto(newPhoto);
+  };
+
+  if (photo) {
+    let sendPic = () => {
+      setMessages([
+        ...messages,
+        {
+          text: "",
+          isUser: true,
+          isAudio: false,
+          audio: undefined,
+          isPic: true,
+          pic: photo,
+        },
+      ]);
+      setPhoto(undefined);
+      setIsTakingPhoto(false);
+    };
+
+    let savePhoto = () => {
+      MediaLibrary.saveToLibraryAsync(photo.uri).then(() => {
+        setPhoto(undefined);
+      });
+    };
+
+    return (
+      <SafeAreaView style={styles.container}>
+        <Image
+          style={styles.photo_preview}
+          source={{ uri: "data:image/jpg;base64," + photo.base64 }}
+        />
+        <Button title="Send" onPress={sendPic} />
+        {hasMediaLibraryPermission ? (
+          <Button title="Save" onPress={savePhoto} />
+        ) : undefined}
+        <Button title="Discard" onPress={() => setPhoto(undefined)} />
+      </SafeAreaView>
+    );
+  }
+
   const handleCameraPress = () => {
     // Implement camera functionality
   };
@@ -121,72 +194,115 @@ const MainPage = ({ navigation }) => {
     setInputText("");
   };
 
-  return (
-    <View style={styles.container}>
-      {/* Chat messages */}
-      <ScrollView style={styles.chatContainer}>
-        {messages.map((message, index) => {
-          // console.log(message);
-          return (
-            <View
-              key={index}
-              style={message.isUser ? styles.userMessage : styles.aiMessage}
-            >
-              {message.isAudio ? (
-                <Button
-                  style={styles.button}
-                  onPress={() => message.audio.sound.replayAsync()}
-                  title="Play"></Button>
-              ) : (
-                <Text style={styles.messageText}>{message.text}</Text>
-              )}
-            </View>
-          );
-        })}
-      </ScrollView>
-
-      {/* Speech to text input */}
-      <View style={{ flexDirection: "row" }}>
-        <TextInput
-          style={styles.input}
-          value={inputText}
-          onChangeText={(inputText) => {
-            setInputText(inputText);
+  if (isTakingPhoto) {
+    return (
+      <Camera style={styles.photo_container} ref={cameraRef}>
+        <View style={styles.photo_buttonContainer}>
+          <Button title="Take Pic" onPress={takePic} />
+        </View>
+        <View style={styles.photo_buttonContainer}>
+          <Button title="Back" onPress={() => setIsTakingPhoto(false)} />
+        </View>
+        <StatusBar style="auto" />
+      </Camera>
+    );
+  } else {
+    return (
+      <View style={styles.container}>
+        {/* Chat messages */}
+        <ScrollView
+          style={styles.chatContainer}
+          ref={scrollViewRef}
+          onContentSizeChange={() => {
+            scrollViewRef?.current?.scrollToEnd({ animated: true });
           }}
-          placeholder="Type your message..."
-        />
-
-        {/* Send button */}
-        <TouchableOpacity style={styles.sendButton} onPress={handleSubmit}>
-          <Text style={styles.sendButtonText}>Send</Text>
-        </TouchableOpacity>
-      </View>
-      {/* {getRecordingLines()} */}
-
-      {/* Mic and camera buttons */}
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={[styles.buttonRow, { borderTopLeftRadius: 20 }]}
-          onPressIn={handleMicPress}
-          onPressOut={handleMicRelease}
         >
-          <Ionicons name="md-mic" size={150} color="#EBEBEB" />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.buttonRow, { borderTopRightRadius: 20 }]}
-          onPress={handleCameraPress}
-        >
-          <Ionicons name="camera-outline" size={150} color="#EBEBEB" />
-        </TouchableOpacity>
-      </View>
+          {messages.map((message, index) => {
+            // console.log(message);
+            return (
+              <View
+                key={index}
+                style={
+                  message.isUser
+                    ? message.isPic
+                      ? styles.userMessagePic
+                      : styles.userMessage
+                    : styles.aiMessage
+                }
+              >
+                {message.isAudio ? (
+                  <Button
+                    style={styles.button}
+                    onPress={() => message.audio.sound.replayAsync()}
+                    title="Play"
+                  ></Button>
+                ) : message.isPic ? (
+                  <Image
+                    style={[styles.photo_preview]}
+                    source={{
+                      uri: "data:image/jpg;base64," + message.pic.base64,
+                    }}
+                  />
+                ) : (
+                  <Text style={styles.messageText}>{message.text}</Text>
+                )}
+              </View>
+            );
+          })}
+        </ScrollView>
 
-      {/* Feedback buttons */}
-      {/* Implement your feedback button functionality */}
-    </View>
-  );
+        {/* Speech to text input */}
+        <View style={{ flexDirection: "row" }}>
+          <TextInput
+            style={styles.input}
+            value={inputText}
+            onChangeText={(inputText) => {
+              setInputText(inputText);
+            }}
+            placeholder="Type your message..."
+          />
+
+          {/* Send button */}
+          <TouchableOpacity style={styles.sendButton} onPress={handleSubmit}>
+            <Text style={styles.sendButtonText}>Send</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Mic and camera buttons */}
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={[styles.buttonRow, { borderTopLeftRadius: 20 }]}
+            onLongPress={handleMicPress}
+            onPressOut={handleMicRelease}
+          >
+            <Ionicons name="md-mic" size={150} color="#EBEBEB" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.buttonRow, { borderTopRightRadius: 20 }]}
+            onPress={() => setIsTakingPhoto(true)}
+          >
+            <Ionicons name="camera-outline" size={150} color="#EBEBEB" />
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 };
 
 const styles = StyleSheet.create({
+  photo_container: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  photo_buttonContainer: {
+    backgroundColor: "#fff",
+    alignSelf: "flex-end",
+  },
+  photo_preview: {
+    alignSelf: "stretch",
+    flex: 1,
+  },
   container: {
     width: "100%",
     height: "100%",
@@ -203,6 +319,15 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 10,
     marginBottom: 5,
+  },
+  userMessagePic: {
+    backgroundColor: "#DCF8C6",
+    alignSelf: "flex-end",
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 5,
+    width: "80%",
+    height: 500,
   },
   aiMessage: {
     backgroundColor: "#E4E4E4",
