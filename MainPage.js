@@ -40,7 +40,7 @@ const MainPage = ({ navigation }) => {
   const [inputText, setInputText] = useState("");
 
   // Recording states
-  const [recording, setRecording] = useState();
+  const [recording, setRecording] = useState(undefined);
   const [recordings, setRecordings] = useState([]);
 
   // Photo states
@@ -94,7 +94,7 @@ const MainPage = ({ navigation }) => {
   };
 
   const handleMicRelease = async () => {
-    // setRecording(undefined);
+    setRecording(undefined);
     await recording.stopAndUnloadAsync();
     // console.log(recording);
     console.log("STOP RECORDING");
@@ -127,7 +127,7 @@ const MainPage = ({ navigation }) => {
     ]);
 
     setRecordings(updateRecordings);
-    setRecording(undefined);
+    // setRecording(undefined);
   
     // const fileName = `recording-${Date.now()}.caf`;
     // Move the recording to the new directory with the new file name
