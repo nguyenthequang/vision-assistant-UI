@@ -7,15 +7,16 @@ import {
   TextInput,
   Button,
   SafeAreaView,
-  Image,
+  Image
 } from "react-native";
 import { Audio } from "expo-av"; // Import Expo Audio module for sound playback
-import { FlatList, ScrollView } from "react-native-gesture-handler";
+import { ScrollView } from "react-native-gesture-handler";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Camera } from "expo-camera";
-import { shareAsync } from "expo-sharing";
 import * as MediaLibrary from "expo-media-library";
 import { StatusBar } from "expo-status-bar";
+import axios from "axios";
+import ky from "ky";
 
 const MainPage = ({ navigation }) => {
   const [messages, setMessages] = useState([
@@ -93,10 +94,11 @@ const MainPage = ({ navigation }) => {
   };
 
   const handleMicRelease = async () => {
-    setRecording(undefined);
+    // setRecording(undefined);
     await recording.stopAndUnloadAsync();
+    // console.log(recording);
     console.log("STOP RECORDING");
-    console.log(recording.getURI());
+    // console.log(recording.getURI());
 
     let updateRecordings = [...recordings];
     const { sound, status } = await recording.createNewLoadedSoundAsync();
@@ -105,6 +107,8 @@ const MainPage = ({ navigation }) => {
       duration: getDurationFormatted(status.durationMillis),
       file: recording.getURI(),
     });
+
+    // console.log(sound);
 
     setMessages([
       ...messages,
@@ -123,6 +127,60 @@ const MainPage = ({ navigation }) => {
     ]);
 
     setRecordings(updateRecordings);
+    setRecording(undefined);
+  
+    // const fileName = `recording-${Date.now()}.caf`;
+    // Move the recording to the new directory with the new file name
+    // await FileSystem.makeDirectoryAsync(FileSystem.documentDirectory + 'recordings/', { intermediates: true });
+    // await FileSystem.moveAsync({
+    //   from: recording.getURI(),
+    //   to: FileSystem.documentDirectory + 'recordings/' + `${fileName}`
+    // });
+
+    // https://stackoverflow.com/questions/70975373/how-to-upload-recording-file-from-expo-av-via-axios
+    // https://stackoverflow.com/questions/49370747/network-error-with-axios-and-react-native
+    const uri = recording.getURI();
+    const filetype = uri.split(".").pop();
+    const filename = uri.split("/").pop();
+    const fd = new FormData();
+    fd.append("audio-record", {
+      uri,
+      type: `audio/${filetype}`,
+      name: filename,
+    });
+    // const response = await ky.post("http://0.0.0.0:8001/speech2text/transcription/audio", {
+    //   body: fd,
+    // });
+    // console.log(response);
+    const headers = {
+      "content-type": "multipart/form-data",
+    };
+    axios
+    .post("http://localhost:8001/", fd, { headers })
+    .then((res) => console.log(res.data));
+
+
+    // fetch(`http://localhost:8001/speech2text/transcription/audio`, {
+    //   method: "POST",
+    //   headers: {
+    //     'Content-Type': 'application/json'
+    //   },
+    //   body: JSON.stringify({name: name})
+    // })
+    // .then(res => {
+    //   console.log(res.status);
+    //   console.log(res.headers);
+    //   return res.json();
+    // })
+    // .then(
+    //   (result) => {
+    //     console.log(result);
+    //   },
+    //   (error) => {
+    //     console.log(error);
+    //   }
+    // )
+  
   };
 
   // Function to handle camera button press
@@ -184,11 +242,15 @@ const MainPage = ({ navigation }) => {
   const handleSubmit = () => {
     setMessages([
       ...messages,
-      { text: "This is an AI--generated response.", isUser: false },
+      { 
+        text: "bot message",
+        isUser: false,
+        isAudio: false,
+        audio: undefined,
+        isPic: false,
+        pic: undefined,
+      }
     ]);
-
-    // Add user message to chat
-    setMessages([...messages, { text: inputText, isUser: true }]);
 
     // Clear input field
     setInputText("");
