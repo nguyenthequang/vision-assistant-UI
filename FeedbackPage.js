@@ -1,48 +1,82 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, Button, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  TextInput,
+  StyleSheet,
+} from "react-native";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { useNavigation } from "@react-navigation/native";
 
-const FeedbackPage = ({ navigation, route }) => {
-  const { message } = route.params;
-  const [feedback, setFeedback] = useState('');
-  
-  const handleFeedbackSubmit = () => {
-    // Implement feedback submission
+const FeedbackPage = () => {
+  const navigation = useNavigation();
+  const [feedback, setFeedback] = useState("");
+  const [selectedOption, setSelectedOption] = useState(null);
+
+  const handleOptionPress = (option) => {
+    setSelectedOption(option);
   };
+
+  const handleSubmit = () => {
+    // Implement submission logic here
+    console.log("Feedback submitted:", feedback, "Selected option:", selectedOption);
+    // Clear the feedback field and reset selected option
+    setFeedback("");
+    setSelectedOption(null);
+  };
+
+  const renderOptionButton = (option, color, darkerColor) => (
+    <TouchableOpacity
+      style={[
+        styles.button,
+        selectedOption === option
+          ? { backgroundColor: darkerColor }
+          : { backgroundColor: color },
+      ]}
+      onPress={() => handleOptionPress(option)}
+    >
+      <Text style={styles.buttonText}>{option}</Text>
+    </TouchableOpacity>
+  );
 
   return (
     <View style={styles.container}>
+      {/* X button */}
+      <TouchableOpacity
+        style={styles.closeButton}
+        onPress={() => navigation.goBack()}
+      >
+        <Ionicons name="close" size={30} color="white" />
+      </TouchableOpacity>
+
+      {/* Title */}
       <Text style={styles.title}>FEEDBACK</Text>
-      <Text style={styles.message}>{message}</Text>
+
+      {/* Spacer */}
+      <View style={styles.spacer} />
 
       {/* Like, Dislike, Neutral buttons */}
       <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.feedbackButton}>
-          <Text>Like</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.feedbackButton}>
-          <Text>Dislike</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.feedbackButton}>
-          <Text>Neutral</Text>
-        </TouchableOpacity>
+        {renderOptionButton("Like", "darkgreen", "purple")}
+        {renderOptionButton("Dislike", "red", "purple")}
+        {renderOptionButton("Neutral", "darkgoldenrod", "purple")}
       </View>
 
-      {/* Feedback input */}
+      {/* Spacer */}
+      <View style={styles.spacer} />
+
+      {/* User Input field */}
       <TextInput
-        style={styles.feedbackInput}
-        placeholder="Type your feedback..."
+        style={styles.input}
         value={feedback}
-        onChangeText={setFeedback}
+        onChangeText={(text) => setFeedback(text)}
+        placeholder="Enter your feedback..."
       />
 
       {/* Submit button */}
-      <TouchableOpacity style={styles.submitButton} onPress={handleFeedbackSubmit}>
-        <Text style={styles.submitButtonText}>Submit</Text>
-      </TouchableOpacity>
-
-      {/* Exit button */}
-      <TouchableOpacity style={styles.exitButton} onPress={() => navigation.goBack()}>
-        <Text style={styles.exitButtonText}>Exit</Text>
+      <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+        <Text style={styles.buttonText}>Submit</Text>
       </TouchableOpacity>
     </View>
   );
@@ -51,57 +85,55 @@ const FeedbackPage = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
+    backgroundColor: "blue",
+    padding: 20,
+  },
+  closeButton: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    zIndex: 1,
   },
   title: {
+    color: "white",
     fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  message: {
-    fontSize: 18,
-    marginBottom: 20,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginTop: 20,
   },
   buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: 20,
   },
-  feedbackButton: {
-    backgroundColor: '#E4E4E4',
+  button: {
     paddingVertical: 10,
-    paddingHorizontal: 15,
+    paddingHorizontal: 20,
     borderRadius: 5,
+    marginHorizontal: 10,
   },
-  feedbackInput: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
+  buttonText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "white",
+  },
+  input: {
+    backgroundColor: "white",
     paddingHorizontal: 10,
-    marginBottom: 20,
-    width: '100%',
-    height: 100,
+    paddingVertical: 15,
+    borderRadius: 5,
+    marginTop: 20,
   },
   submitButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: "green",
+    alignSelf: "center",
     paddingVertical: 10,
-    paddingHorizontal: 15,
+    paddingHorizontal: 20,
     borderRadius: 5,
-    marginBottom: 10,
+    marginTop: 20,
   },
-  submitButtonText: {
-    color: 'white',
-  },
-  exitButton: {
-    alignSelf: 'flex-end',
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 5,
-  },
-  exitButtonText: {
-    color: '#007AFF',
+  spacer: {
+    height: 50, // Add space between the buttons and the input
   },
 });
 
