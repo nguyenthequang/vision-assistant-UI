@@ -16,11 +16,12 @@ import { Camera } from "expo-camera";
 import * as MediaLibrary from "expo-media-library";
 import { StatusBar } from "expo-status-bar";
 import * as FileSystem from "expo-file-system";
-// import * as RNFS from 'react-native-fs';
 import axios from "axios";
 import ky from "ky";
 
-const MainPage = ({ navigation }) => {
+let recording = new Audio.Recording();
+
+const MainPage = async ({ navigation }) => {
   const [messages, setMessages] = useState([
     {
       text: "bot",
@@ -42,6 +43,7 @@ const MainPage = ({ navigation }) => {
   const [inputText, setInputText] = useState("");
 
   // Recording states
+  // const [recording, setRecording] = useState();
   const [recordings, setRecordings] = useState([]);
 
   // Photo states
@@ -53,6 +55,10 @@ const MainPage = ({ navigation }) => {
 
   const scrollViewRef = useRef();
 
+  // const { sound_inform_recording } = await Audio.Sound.createAsync(
+  //   require("./system_sounds/recording.mp3")
+  // );
+
   useEffect(() => {
     (async () => {
       const cameraPermission = await Camera.requestCameraPermissionsAsync();
@@ -62,7 +68,6 @@ const MainPage = ({ navigation }) => {
       setHasMediaLibraryPermission(mediaLibraryPermission.status === "granted");
     })();
   }, []);
-  let recording = new Audio.Recording();
 
   // Function to handle microphone button press
   const getDurationFormatted = (millis) => {
@@ -85,7 +90,8 @@ const MainPage = ({ navigation }) => {
         await recording.prepareToRecordAsync(
           Audio.RECORDING_OPTIONS_PRESET_HIGH_QUALITY
         );
-        await recording.startAsync();
+        await sound_inform_recording.playAsync();
+        // await recording.startAsync();
         console.log("RECORDING");
       } else {
         console.log("Please grant permission");
@@ -98,94 +104,32 @@ const MainPage = ({ navigation }) => {
   async function uploadAudioAsync(uri) {
     // https://stackoverflow.com/questions/64980590/how-to-upload-audio-files-with-express-backend-and-react-native
     console.log("Uploading " + uri);
-    let apiUrl = "http://35.92.178.78:8000/speech2text/transcription/audio";
+    let apiUrl = "http://54.185.97.65:8000/speech2text/transcription/audio";
     let uriParts = uri.split(".");
     let fileType = uriParts[uriParts.length - 1];
 
-    getFileSize = async fileUri => {
-      let fileInfo = await FileSystem.getInfoAsync(fileUri);
-      return fileInfo.size;
-    };
-    console.log(await getFileSize(uri));
-
-    console.log("Read file");
-    const binAudio = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem?.EncodingType?.Base64 });
-    console.log("Read file DONE");
-
-    // const reader = new FileReader();
-    // reader.readAsArrayBuffer({uri: uri})
-    // console.log(reader);
-    // const binaryData = reader.result;
+    console.log("Convert file");
+    const base64Audio = await FileSystem.readAsStringAsync(uri, {
+      encoding: FileSystem?.EncodingType?.Base64,
+    });
+    console.log("Convert file DONE");
 
     let formData = new FormData();
-    formData.append("audio_file", binAudio);
+    formData.append("audio_file", base64Audio);
     // console.log(formData);
     console.log("Formdata");
 
     let options = {
       method: "POST",
-      headers: {
-        "Content-Type": "undefined",
-      },
-      body: formData
-    };
-    console.log(options);
-    console.log("POSTing " + uri + " to " + apiUrl);
-    // return await axios.post(apiUrl, {audio_file: binAudio})
-    return fetch(apiUrl, options);
-  }
-
-  async function uploadAudioFS(filename, filepath) {
-    var uploadUrl = "http://52.42.207.241:8000/speech2text/transcription/audio"; // For testing purposes, go to http://requestb.in/ and create your own link
-    // create an array of objects of the files you want to upload
-    var files = [
-      {
-        name: "test1",
-        filename: filename,
-        filepath: filepath,
-        filetype: "audio/x-m4a",
-      }
-    ];
-
-    var upload = (response) => {
-      var jobId = response.jobId;
-      console.log("UPLOAD HAS BEGUN! JobId: " + jobId);
-    };
-
-    var uploadProgress = (response) => {
-      var percentage = Math.floor(
-        (response.totalBytesSent / response.totalBytesExpectedToSend) * 100
-      );
-      console.log("UPLOAD IS " + percentage + "% DONE!");
-    };
-
-    // upload files
-    RNFS.uploadFiles({
-      toUrl: uploadUrl,
-      method: "POST",
+      body: formData,
       headers: {
         Accept: "application/json",
         "Content-Type": "multipart/form-data",
       },
-      fields: {
-        audio_file: "world",
-      },
-      begin: uploadBegin,
-      progress: uploadProgress,
-    })
-      .promise.then((response) => {
-        if (response.statusCode == 200) {
-          console.log("FILES UPLOADED!"); // response.statusCode, response.headers, response.body
-        } else {
-          console.log("SERVER ERROR");
-        }
-      })
-      .catch((err) => {
-        if (err.description === "cancelled") {
-          // cancelled by user
-        }
-        console.log(err);
-      });
+    };
+
+    console.log("POSTing " + uri + " to " + apiUrl);
+    return fetch(apiUrl, options);
   }
 
   const handleMicRelease = async () => {
@@ -234,45 +178,12 @@ const MainPage = ({ navigation }) => {
 
     // Send to backend
     console.log("Sending to backend");
-    const res = await (await uploadAudioAsync(newURI)).json();
+    // const res = await uploadAudioAsync(newURI);
     console.log("Post audio done");
-    console.log(res);
+    // console.log(res);
   };
 
   // Function to handle camera button press
-
-  async function uploadPhotoAsync(uri) {
-    // https://stackoverflow.com/questions/64980590/how-to-upload-audio-files-with-express-backend-and-react-native
-    console.log("Uploading " + uri);
-    let apiUrl = "http://35.92.178.78:8000/speech2text/transcription/audio";
-    let uriParts = uri.split(".");
-    let fileType = uriParts[uriParts.length - 1];
-
-    console.log("Read file");
-    const binAudio = await FileSystem.readAsStringAsync(uri);
-    console.log("Read file DONE");
-
-    // const reader = new FileReader();
-    // reader.readAsArrayBuffer({uri: uri})
-    // console.log(reader);
-    // const binaryData = reader.result;
-
-    let formData = new FormData();
-    formData.append("audio_file", binAudio);
-    // console.log(formData);
-    console.log("Formdata");
-
-    let options = {
-      method: "POST",
-      "audio_file": binAudio,
-      headers: {
-        "Content-Type": "undefined",
-      },
-    };
-    console.log(options);
-    console.log("POSTing " + uri + " to " + apiUrl);
-    return fetch(apiUrl, options);
-  }
 
   let takePic = async () => {
     let options = {
@@ -300,8 +211,6 @@ const MainPage = ({ navigation }) => {
       ]);
       setPhoto(undefined);
       setIsTakingPhoto(false);
-
-
     };
 
     let savePhoto = () => {
