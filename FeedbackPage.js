@@ -5,12 +5,16 @@ import {
   TouchableOpacity,
   TextInput,
   StyleSheet,
+  Button,
+  Image,
 } from "react-native";
+
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useNavigation } from "@react-navigation/native";
 
 const FeedbackPage = ({ route, navigation }) => {
   // const navigation = useNavigation();
+  const { message } = route.params;
   const [feedback, setFeedback] = useState("");
   const [selectedOption, setSelectedOption] = useState(null);
 
@@ -59,7 +63,37 @@ const FeedbackPage = ({ route, navigation }) => {
       <Text style={styles.title}>FEEDBACK</Text>
 
       {/* Spacer */}
-      <View style={styles.spacer} />
+      <View style={styles.spacer}>
+        <TouchableOpacity
+          style={
+            message.isUser
+              ? message.isPic
+                ? styles.userMessagePic
+                : styles.userMessage
+              : styles.aiMessage
+          }
+        >
+          {message.isAudio ? (
+            <Button
+              style={styles.button}
+              onPress={async () => {
+                await message.audio.sound.replayAsync();
+                // message.audio.sound.unloadAsync();
+              }}
+              title="Play"
+            ></Button>
+          ) : message.isPic ? (
+            <Image
+              style={[styles.photo_preview]}
+              source={{
+                uri: "data:image/jpg;base64," + message.pic.base64,
+              }}
+            />
+          ) : (
+            <Text style={styles.messageText}>{message.text}</Text>
+          )}
+        </TouchableOpacity>
+      </View>
 
       {/* Like, Dislike, Neutral buttons */}
       <View style={styles.buttonContainer}>
@@ -138,7 +172,34 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   spacer: {
-    height: 50, // Add space between the buttons and the input
+    height: "50%", // Add space between the buttons and the input
+  },
+  photo_preview: {
+    alignSelf: "stretch",
+    flex: 1,
+  },
+  userMessage: {
+    backgroundColor: "#DCF8C6",
+    alignSelf: "flex-end",
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 5,
+  },
+  userMessagePic: {
+    backgroundColor: "#DCF8C6",
+    alignSelf: "flex-end",
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 5,
+    width: "80%",
+    height: 500,
+  },
+  aiMessage: {
+    backgroundColor: "#E4E4E4",
+    alignSelf: "flex-start",
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 5,
   },
 });
 

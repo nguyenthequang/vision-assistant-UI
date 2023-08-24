@@ -15,6 +15,7 @@ import { Camera } from "expo-camera";
 import * as MediaLibrary from "expo-media-library";
 import * as FileSystem from "expo-file-system";
 import IntroPage from "./IntroPage";
+import {playRecordingDoneSound, playRecordingSound} from "./utils";
 // import { HeaderBackButton } from '@react-navigation/native';
 
 import axios from "axios";
@@ -51,8 +52,19 @@ const MainPage = ({ route, navigation }) => {
   const [hasMediaLibraryPermission, setHasMediaLibraryPermission] = useState();
   const [photo, setPhoto] = useState();
   const [queryPhoto, setQueryPhoto] = useState();
+  const [soundRecording, setSoundRecording] = useState();
 
   const scrollViewRef = useRef();
+
+  // async function playRecordingSound() {
+  //   const soundRec = new Audio.Sound();
+  //   await soundRec.loadAsync(require("./system_sounds/recording.mp3"));
+    
+  //   await soundRec.playAsync();
+  //   await delay(1000);
+
+  //   await soundRec.unloadAsync();
+  // }
 
   useEffect(() => {
     (async () => {
@@ -69,7 +81,9 @@ const MainPage = ({ route, navigation }) => {
 
     return () => clearTimeout(timer);
   }, []);
+
   let recording = new Audio.Recording();
+
   React.useEffect(() => {
     console.log("Backed from photo");
     if (route.params?.photo) {
@@ -100,6 +114,7 @@ const MainPage = ({ route, navigation }) => {
 
   const handleMicPress = async () => {
     try {
+      await playRecordingSound();
       const permission = await Audio.requestPermissionsAsync();
 
       if (permission.status == "granted") {
@@ -221,6 +236,7 @@ const MainPage = ({ route, navigation }) => {
   }
 
   const handleMicRelease = async () => {
+    await playRecordingDoneSound()
     console.log("STOP RECORDING");
     await recording.stopAndUnloadAsync();
 
@@ -231,8 +247,6 @@ const MainPage = ({ route, navigation }) => {
       duration: getDurationFormatted(status.durationMillis),
       file: recording.getURI(),
     });
-
-    // console.log(sound);
 
     setMessages([
       ...messages,
@@ -268,7 +282,6 @@ const MainPage = ({ route, navigation }) => {
     console.log("Sending to backend");
     const res = await (await uploadAudioAsync(newURI)).json();
     console.log("Post audio done");
-    console.log(res);
   };
 
   // Function to handle camera button press
@@ -301,7 +314,7 @@ const MainPage = ({ route, navigation }) => {
         "Content-Type": "undefined",
       },
     };
-    console.log(options);
+    // console.log(options);
     console.log("POSTing " + uri + " to " + apiUrl);
     return fetch(apiUrl, options);
   }
@@ -371,7 +384,10 @@ const MainPage = ({ route, navigation }) => {
                 {message.isAudio ? (
                   <Button
                     style={styles.button}
-                    onPress={() => message.audio.sound.replayAsync()}
+                    onPress={async () => {
+                      await message.audio.sound.replayAsync();
+                      // message.audio.sound.unloadAsync();
+                    }}
                     title="Play"
                   ></Button>
                 ) : message.isPic ? (
