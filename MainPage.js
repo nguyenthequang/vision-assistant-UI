@@ -6,7 +6,6 @@ import {
   StyleSheet,
   TextInput,
   Button,
-  SafeAreaView,
   Image,
 } from "react-native";
 import { Audio } from "expo-av"; // Import Expo Audio module for sound playback
@@ -14,13 +13,15 @@ import { ScrollView } from "react-native-gesture-handler";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Camera } from "expo-camera";
 import * as MediaLibrary from "expo-media-library";
-import { StatusBar } from "expo-status-bar";
 import * as FileSystem from "expo-file-system";
-// import * as RNFS from 'react-native-fs';
+import IntroPage from "./IntroPage";
+// import { HeaderBackButton } from '@react-navigation/native';
+
 import axios from "axios";
 import ky from "ky";
 
-const MainPage = ({ navigation }) => {
+const MainPage = ({ route, navigation }) => {
+  const [loadingMainPage, setLoadingMainPage] = useState(true);
   const [messages, setMessages] = useState([
     {
       text: "bot",
@@ -45,11 +46,11 @@ const MainPage = ({ navigation }) => {
   const [recordings, setRecordings] = useState([]);
 
   // Photo states
-  let cameraRef = useRef();
   const [isTakingPhoto, setIsTakingPhoto] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState();
   const [hasMediaLibraryPermission, setHasMediaLibraryPermission] = useState();
   const [photo, setPhoto] = useState();
+  const [queryPhoto, setQueryPhoto] = useState();
 
   const scrollViewRef = useRef();
 
@@ -61,8 +62,32 @@ const MainPage = ({ navigation }) => {
       setHasCameraPermission(cameraPermission.status === "granted");
       setHasMediaLibraryPermission(mediaLibraryPermission.status === "granted");
     })();
+
+    const timer = setTimeout(() => {
+      setLoadingMainPage(false);
+    }, 2000); // Switch to Main page after 2 second
+
+    return () => clearTimeout(timer);
   }, []);
   let recording = new Audio.Recording();
+  React.useEffect(() => {
+    console.log("Backed from photo");
+    if (route.params?.photo) {
+      setQueryPhoto(route.params?.photo);
+      setMessages([
+        ...messages,
+        {
+          text: "",
+          isUser: true,
+          isAudio: false,
+          audio: undefined,
+          isPic: true,
+          pic: route.params.photo,
+        },
+      ]);
+      setIsTakingPhoto(false);
+    }
+  }, [route.params?.photo]);
 
   // Function to handle microphone button press
   const getDurationFormatted = (millis) => {
@@ -102,21 +127,72 @@ const MainPage = ({ navigation }) => {
     let uriParts = uri.split(".");
     let fileType = uriParts[uriParts.length - 1];
 
-    getFileSize = async fileUri => {
+    getFileSize = async (fileUri) => {
       let fileInfo = await FileSystem.getInfoAsync(fileUri);
       return fileInfo.size;
     };
     console.log(await getFileSize(uri));
 
     console.log("Read file");
-    const binAudio = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem?.EncodingType?.Base64 });
+    const binAudio = await FileSystem.readAsStringAsync(uri);
+    console.log("Read file DONE");
+
+    if (queryPhoto) {
+      console.log("Read photo");
+      const binPhoto = await FileSystem.readAsStringAsync(queryPhoto.uri);
+      console.log("Read photo DONE");
+    }
+    // const reader = new FileReader();
+    // reader.readAsArrayBuffer({uri: uri})
+    // console.log(reader);
+    // const binaryData = reader.result;
+    // binAudio = "AAAAGGZ0eXAzZ3A0AAAAAGlzb20zZ3A0AAACl21vb3YAAABsbXZoZAAAAADhC2t24QtrdgAAJxAAAAJYAAEAAAEAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAA"
+    let formData = new FormData();
+    formData.append("audio_file", binAudio);
+    // console.log(formData);
+    console.log("Added audio to Formdata");
+    if (queryPhoto) {
+      formData.append("image_file_content", queryPhoto);
+      console.log("Added image to Formdata");
+    }
+
+    let options = {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+      },
+      body: formData,
+    };
+    console.log(options);
+    console.log("POSTing " + uri + " to " + apiUrl);
+    // return await axios.post(apiUrl, {audio_file: binAudio})
+    return fetch(apiUrl, options);
+  }
+
+  async function uploadAudioFS(filename, filepath) {
+    // https://stackoverflow.com/questions/64980590/how-to-upload-audio-files-with-express-backend-and-react-native
+    console.log("Uploading " + uri);
+    let apiUrl = "http://35.92.178.78:8000/speech2text/transcription/audio";
+    let uriParts = uri.split(".");
+    let fileType = uriParts[uriParts.length - 1];
+
+    getFileSize = async (fileUri) => {
+      let fileInfo = await FileSystem.getInfoAsync(fileUri);
+      return fileInfo.size;
+    };
+    console.log(await getFileSize(uri));
+
+    console.log("Read file");
+    const binAudio = await FileSystem.readAsStringAsync(uri, {
+      encoding: FileSystem?.EncodingType?.Base64,
+    });
     console.log("Read file DONE");
 
     // const reader = new FileReader();
     // reader.readAsArrayBuffer({uri: uri})
     // console.log(reader);
     // const binaryData = reader.result;
-
+    // binAudio = "AAAAGGZ0eXAzZ3A0AAAAAGlzb20zZ3A0AAACl21vb3YAAABsbXZoZAAAAADhC2t24QtrdgAAJxAAAAJYAAEAAAEAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAA"
     let formData = new FormData();
     formData.append("audio_file", binAudio);
     // console.log(formData);
@@ -127,65 +203,21 @@ const MainPage = ({ navigation }) => {
       headers: {
         "Content-Type": "undefined",
       },
-      body: formData
+      body: { audio_file: binAudio },
     };
     console.log(options);
     console.log("POSTing " + uri + " to " + apiUrl);
-    // return await axios.post(apiUrl, {audio_file: binAudio})
-    return fetch(apiUrl, options);
-  }
-
-  async function uploadAudioFS(filename, filepath) {
-    var uploadUrl = "http://52.42.207.241:8000/speech2text/transcription/audio"; // For testing purposes, go to http://requestb.in/ and create your own link
-    // create an array of objects of the files you want to upload
-    var files = [
-      {
-        name: "test1",
-        filename: filename,
-        filepath: filepath,
-        filetype: "audio/x-m4a",
-      }
-    ];
-
-    var upload = (response) => {
-      var jobId = response.jobId;
-      console.log("UPLOAD HAS BEGUN! JobId: " + jobId);
-    };
-
-    var uploadProgress = (response) => {
-      var percentage = Math.floor(
-        (response.totalBytesSent / response.totalBytesExpectedToSend) * 100
-      );
-      console.log("UPLOAD IS " + percentage + "% DONE!");
-    };
 
     // upload files
-    RNFS.uploadFiles({
-      toUrl: uploadUrl,
+    return await RNFS.uploadFiles({
+      toUrl: apiUrl,
       method: "POST",
       headers: {
         Accept: "application/json",
         "Content-Type": "multipart/form-data",
       },
-      fields: {
-        audio_file: "world",
-      },
-      begin: uploadBegin,
-      progress: uploadProgress,
-    })
-      .promise.then((response) => {
-        if (response.statusCode == 200) {
-          console.log("FILES UPLOADED!"); // response.statusCode, response.headers, response.body
-        } else {
-          console.log("SERVER ERROR");
-        }
-      })
-      .catch((err) => {
-        if (err.description === "cancelled") {
-          // cancelled by user
-        }
-        console.log(err);
-      });
+      body: formData,
+    });
   }
 
   const handleMicRelease = async () => {
@@ -232,7 +264,7 @@ const MainPage = ({ navigation }) => {
       to: newURI,
     });
 
-    // Send to backend
+    // Send audio to backend only
     console.log("Sending to backend");
     const res = await (await uploadAudioAsync(newURI)).json();
     console.log("Post audio done");
@@ -264,7 +296,7 @@ const MainPage = ({ navigation }) => {
 
     let options = {
       method: "POST",
-      "audio_file": binAudio,
+      audio_file: binAudio,
       headers: {
         "Content-Type": "undefined",
       },
@@ -284,46 +316,6 @@ const MainPage = ({ navigation }) => {
     let newPhoto = await cameraRef.current.takePictureAsync(options);
     setPhoto(newPhoto);
   };
-
-  if (photo) {
-    let sendPic = () => {
-      setMessages([
-        ...messages,
-        {
-          text: "",
-          isUser: true,
-          isAudio: false,
-          audio: undefined,
-          isPic: true,
-          pic: photo,
-        },
-      ]);
-      setPhoto(undefined);
-      setIsTakingPhoto(false);
-
-
-    };
-
-    let savePhoto = () => {
-      MediaLibrary.saveToLibraryAsync(photo.uri).then(() => {
-        setPhoto(undefined);
-      });
-    };
-
-    return (
-      <SafeAreaView style={styles.container}>
-        <Image
-          style={styles.photo_preview}
-          source={{ uri: "data:image/jpg;base64," + photo.base64 }}
-        />
-        <Button title="Send" onPress={sendPic} />
-        {hasMediaLibraryPermission ? (
-          <Button title="Save" onPress={savePhoto} />
-        ) : undefined}
-        <Button title="Discard" onPress={() => setPhoto(undefined)} />
-      </SafeAreaView>
-    );
-  }
 
   const handleCameraPress = () => {
     // Implement camera functionality
@@ -346,19 +338,9 @@ const MainPage = ({ navigation }) => {
     // Clear input field
     setInputText("");
   };
-
-  if (isTakingPhoto) {
-    return (
-      <Camera style={styles.photo_container} ref={cameraRef}>
-        <View style={styles.photo_buttonContainer}>
-          <Button title="Take Pic" onPress={takePic} />
-        </View>
-        <View style={styles.photo_buttonContainer}>
-          <Button title="Back" onPress={() => setIsTakingPhoto(false)} />
-        </View>
-        <StatusBar style="auto" />
-      </Camera>
-    );
+  // Render section
+  if (loadingMainPage) {
+    return <IntroPage />;
   } else {
     return (
       <View style={styles.container}>
@@ -432,7 +414,11 @@ const MainPage = ({ navigation }) => {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.buttonRow, { borderTopRightRadius: 20 }]}
-            onPress={() => setIsTakingPhoto(true)}
+            onPress={() => {
+              navigation.navigate("TakePhoto", {
+                hasMediaLibraryPermission: hasMediaLibraryPermission,
+              });
+            }}
           >
             <Ionicons name="camera-outline" size={150} color="#EBEBEB" />
           </TouchableOpacity>
@@ -447,10 +433,13 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    flexDirection: "row",
   },
   photo_buttonContainer: {
     backgroundColor: "#fff",
     alignSelf: "flex-end",
+    height: 100,
+    width: 100,
   },
   photo_preview: {
     alignSelf: "stretch",

@@ -1,15 +1,7 @@
 import React, { useEffect } from 'react';
 import { View, Image, StyleSheet } from 'react-native';
 
-const IntroPage = ({ navigation }) => {
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      navigation.navigate('Main');
-    }, 2000); // Switch to Main page after 2 second
-
-    return () => clearTimeout(timer);
-  }, []);
-
+const IntroPage = () => {
   return (
     <View style={styles.container}>
       <Image source={require('./IntroImage.png')} style={styles.image} />
