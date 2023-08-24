@@ -1,37 +1,3 @@
-// import React, { useEffect } from 'react';
-// import { View, Image, StyleSheet } from 'react-native';
-
-// const MainPage = ({ navigation }) => {
-//   useEffect(() => {
-//     const timer = setTimeout(() => {
-//       navigation.navigate('Feedback');
-//     }, 2000); // Switch to Main page after 2 second
-
-//     return () => clearTimeout(timer);
-//   }, []);
-
-//   return (
-//     <View style={styles.container}>
-//       <Image source={require('./IntroImage.png')} style={styles.image} />
-//     </View>
-//   );
-// };
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//   },
-//   image: {
-//     width: '100%',
-//     height: '100%',
-//     resizeMode: 'cover',
-//   },
-// });
-
-// export default MainPage;
-
 import React, { useState, useRef, useEffect } from "react";
 import {
   View,
@@ -423,6 +389,15 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 10,
     marginBottom: 5,
+  },
+  userMessagePic: {
+    backgroundColor: "#DCF8C6",
+    alignSelf: "flex-end",
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 5,
+    width: "80%",
+    height: 500,
   },
   userMessagePic: {
     backgroundColor: "#DCF8C6",
