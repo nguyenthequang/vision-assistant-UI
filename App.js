@@ -19,7 +19,7 @@ export default function App() {
             // headerTitle: (props) => <LogoTitle {...props} />,
             // Add a placeholder button without the `onPress` to avoid flicker
             headerLeft: () => (
-              <Ionicons name="camera-outline" size={30} color="#007AFF" />
+              <Ionicons name="camera-outline" size={3} color="#007AFF" />
             ),
           })}
         />

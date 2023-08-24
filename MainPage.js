@@ -355,7 +355,7 @@ const MainPage = ({ route, navigation }) => {
           {messages.map((message, index) => {
             // console.log(message);
             return (
-              <View
+              <TouchableOpacity
                 key={index}
                 style={
                   message.isUser
@@ -364,6 +364,9 @@ const MainPage = ({ route, navigation }) => {
                       : styles.userMessage
                     : styles.aiMessage
                 }
+                onLongPress={() => {
+                  navigation.navigate("Feedback", (params = { message }));
+                }}
               >
                 {message.isAudio ? (
                   <Button
@@ -381,7 +384,7 @@ const MainPage = ({ route, navigation }) => {
                 ) : (
                   <Text style={styles.messageText}>{message.text}</Text>
                 )}
-              </View>
+              </TouchableOpacity>
             );
           })}
         </ScrollView>
