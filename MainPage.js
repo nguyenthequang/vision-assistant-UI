@@ -271,6 +271,14 @@ const MainPage = ({ navigation }) => {
   } else {
     return (
       <View style={styles.container}>
+        {/* X button */}
+        <TouchableOpacity
+          style={styles.feedButton}
+          onPress={() => navigation.navigate('Feedback')}
+        >
+          <Ionicons name="alert-circle-outline" size={40} color="blue" />
+        </TouchableOpacity>
+
         {/* Chat messages */}
         <ScrollView
           style={styles.chatContainer}
@@ -391,6 +399,15 @@ const styles = StyleSheet.create({
     width: "80%",
     height: 500,
   },
+  userMessagePic: {
+    backgroundColor: "#DCF8C6",
+    alignSelf: "flex-end",
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 5,
+    width: "80%",
+    height: 500,
+  },
   aiMessage: {
     backgroundColor: "#E4E4E4",
     alignSelf: "flex-start",
@@ -429,6 +446,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#007AFF",
+  },
+  feedButton: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    zIndex: 1,
   },
 });
 
